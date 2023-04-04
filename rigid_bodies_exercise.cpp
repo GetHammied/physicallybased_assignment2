@@ -1,8 +1,7 @@
 #include <viewer.h>
 #include <cstddef>
 #include <algorithm>
-#include <vector>
-#include <numeric>
+#include <iostream>
 
 #include "world.h"
 #include "scene.h"
@@ -11,6 +10,8 @@
 #include <glm/gtx/matrix_transform_2d.hpp>
 
 float checkRelativeVelocity(RigidBody& a, RigidBody& b, const glm::vec2& normal);
+float calculateImpulseMagnitude(RigidBody& a, RigidBody& b, const glm::vec2& normal);
+float getEpsilon();
 
 struct ExerciseBroadPhase : public BroadPhaseBase
 {
@@ -87,28 +88,37 @@ void contact_response(RigidBody& a, RigidBody& b, const glm::vec2& point, const 
      *  if(a.type == RigidBody::eType::DYNAMIC) { ... }
      */
 
-    
-    
-    if (checkRelativeVelocity(a, b, normal) >= 0 && a.shape.mass != 0 && b.shape.mass != 0) {
+    if (a.type == RigidBody::eType::STATIC)
         return;
-    }
-    else{
-        a.velocity += calculateRestitutionCoefficient(a,b,normal) * (normal / a.shape.mass);
-        b.velocity -= calculateRestitutionCoefficient(a, b, normal) * (normal / b.shape.mass);
-    }
-    return;
 
+     // calculate the relative velocity in the direction of the contact normal
+    float relativeVelocity = checkRelativeVelocity(a, b, normal);
 
+    // if the bodies are already separating, no impulse is needed
+    if (relativeVelocity >= 0.0f)
+        return;
+
+    
+
+    float impulse = calculateImpulseMagnitude(a, b, normal);
+    a.velocity += impulse / a.shape.mass;
+    b.velocity -= impulse / b.shape.mass;
+    
+    
+ 
 }
 
-//TODO 
-float getEpsilon(RigidBody& a, RigidBody& b, const glm::vec2& normal) {
-    return 1;
-}
 
-float calculateRestitutionCoefficient(RigidBody& a, RigidBody& b, const glm::vec2& normal) {
-    return ((-(1 + getEpsilon(a, b, normal)) * checkRelativeVelocity(a, b, normal)* normal) / (normal * normal * (a.shape.mass + b.shape.mass)));
-    // USE DOT PRODUCT n * n ???
+
+float calculateImpulseMagnitude(RigidBody& a, RigidBody& b, const glm::vec2& normal) {
+    float invMassA = 1.0f / a.shape.mass;
+    float invMassB = 1.0f / b.shape.mass;
+    float invMassSum = invMassA + invMassB;
+    float relativeVelocity = checkRelativeVelocity(a, b, normal);
+    float e = a.coeffRest;
+    float j = -(1 + e) * relativeVelocity / (invMassSum * glm::dot(normal, normal));
+    
+    return j;
 }
 
 
