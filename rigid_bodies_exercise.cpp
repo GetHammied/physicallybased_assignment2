@@ -120,13 +120,8 @@ void contact_response(RigidBody& a, RigidBody& b, const glm::vec2& point, const 
 
 
 float calculateImpulseMagnitude(RigidBody& a, RigidBody& b, const glm::vec2& normal) {
-    float invMassA = 1.0f / a.shape.mass;
-    float invMassB = 1.0f / b.shape.mass;
-    float invMassSum = invMassA + invMassB;
-    float relativeVelocity = getRelativeVelocity(a, b, normal);
-    float e = a.coeffRest;
-    float j = -(1 + e) * relativeVelocity / (invMassSum * glm::dot(normal, normal));
-
+    float j = -(1 + a.coeffRest) * glm::dot(normal, a.velocity - b.velocity) / glm::dot(normal, normal) * (a.shape.mass + b.shape.mass);
+    std::cout << j<<std::endl;
     return j;
 }
 
