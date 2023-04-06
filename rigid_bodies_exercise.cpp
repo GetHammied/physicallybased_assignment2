@@ -91,7 +91,7 @@ void contact_response(RigidBody& a, RigidBody& b, const glm::vec2& point, const 
  
 
      // calculate the relative velocity in the direction of the contact normal
-    float relativeVelocity = checkRelativeVelocity(a, b, normal);
+    float relativeVelocity = getRelativeVelocity(a, b, normal);
 
     // if the bodies are already separating, no impulse is needed
     if (relativeVelocity >= 0.0f) {
@@ -101,15 +101,15 @@ void contact_response(RigidBody& a, RigidBody& b, const glm::vec2& point, const 
         
         float impulse = calculateImpulseMagnitude(a, b, normal);
         if (a.type == RigidBody::eType::STATIC) {
-            b.velocity -= impulse / b.shape.mass;
+            b.velocity -= impulse * normal / b.shape.mass;
         }
         else if (b.type == RigidBody::eType::STATIC) {
-            a.velocity += impulse / a.shape.mass;
+            a.velocity += impulse * normal/ a.shape.mass;
         }
         else {
 
-            a.velocity += impulse / a.shape.mass;
-            b.velocity -= impulse / b.shape.mass;
+            a.velocity += impulse * normal/ a.shape.mass;
+            b.velocity -= impulse * normal/ b.shape.mass;
         }
         return;
     }
@@ -123,15 +123,15 @@ float calculateImpulseMagnitude(RigidBody& a, RigidBody& b, const glm::vec2& nor
     float invMassA = 1.0f / a.shape.mass;
     float invMassB = 1.0f / b.shape.mass;
     float invMassSum = invMassA + invMassB;
-    float relativeVelocity = checkRelativeVelocity(a, b, normal);
+    float relativeVelocity = getRelativeVelocity(a, b, normal);
     float e = a.coeffRest;
     float j = -(1 + e) * relativeVelocity / (invMassSum * glm::dot(normal, normal));
-    
+
     return j;
 }
 
 
-float checkRelativeVelocity(RigidBody& a, RigidBody& b, const glm::vec2& normal) {
+float getRelativeVelocity(RigidBody& a, RigidBody& b, const glm::vec2& normal) {
     return glm::dot(normal, (a.velocity - b.velocity));
 }
 //returns relative velocity of bodies a and b in normal direction of impact
