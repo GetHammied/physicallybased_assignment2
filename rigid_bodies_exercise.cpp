@@ -92,9 +92,9 @@ void contact_response(RigidBody& a, RigidBody& b, const glm::vec2& point, const 
 
      // calculate the relative velocity in the direction of the contact normal
     float relativeVelocity = getRelativeVelocity(a, b, normal);
-
+    
     // if the bodies are already separating, no impulse is needed
-    if (relativeVelocity >= 0.0f) {
+    if (relativeVelocity <= 0.0f) {
         return;
     }else {
 
@@ -113,15 +113,13 @@ void contact_response(RigidBody& a, RigidBody& b, const glm::vec2& point, const 
         }
         return;
     }
-    
- 
 }
 
 
 
 float calculateImpulseMagnitude(RigidBody& a, RigidBody& b, const glm::vec2& normal) {
     float j = -(1 + a.coeffRest) * glm::dot(normal, a.velocity - b.velocity) / glm::dot(normal, normal) * (a.shape.mass + b.shape.mass);
-    std::cout << j<<std::endl;
+    
     return j;
 }
 
@@ -130,6 +128,7 @@ float getRelativeVelocity(RigidBody& a, RigidBody& b, const glm::vec2& normal) {
     return glm::dot(normal, (a.velocity - b.velocity));
 }
 //returns relative velocity of bodies a and b in normal direction of impact
+
 
 
 int main(int argc, char** argv)
