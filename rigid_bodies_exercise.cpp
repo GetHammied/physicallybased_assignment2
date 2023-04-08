@@ -12,6 +12,7 @@
 float checkRelativeVelocity(RigidBody& a, RigidBody& b, const glm::vec2& normal);
 float calculateImpulseMagnitude(RigidBody& a, RigidBody& b, const glm::vec2& normal);
 float getEpsilon();
+float getRelativeVelocity(RigidBody& a, RigidBody& b, const glm::vec2& normal);
 
 struct ExerciseBroadPhase : public BroadPhaseBase
 {
@@ -21,12 +22,12 @@ struct ExerciseBroadPhase : public BroadPhaseBase
      *  -> you might not need to implement all methods (depends on the algorithm you want to implement)
      */
 
-    void onCreate(RigidBody &body) override final
+    void onCreate(RigidBody& body) override final
     {
         /* called when a rigid body is created (e.g. insert into hierarchy) */
     }
 
-    void onUpdate(RigidBody &body)  override final
+    void onUpdate(RigidBody& body)  override final
     {
         /*
          * called when the position and rotation of a rigid body changes
@@ -36,33 +37,33 @@ struct ExerciseBroadPhase : public BroadPhaseBase
          * to access the specific data check the type and cast.
          */
 
-        if(body.shape.type == Shape::eType::CIRCLE)
+        if (body.shape.type == Shape::eType::CIRCLE)
         {
             auto& circle = static_cast<Circle&>(body.shape);
             /* circle.radius, body.position */
         }
-        else if(body.shape.type == Shape::eType::BOX)
+        else if (body.shape.type == Shape::eType::BOX)
         {
             auto& box = static_cast<Box&>(body.shape);
             /*  box.world_vertices (corner points of the rectangle) */
         }
     }
 
-    void query(std::vector<RigidBody> &bodies, std::vector<Contact> &collisionContacts) override final
+    void query(std::vector<RigidBody>& bodies, std::vector<Contact>& collisionContacts) override final
     {
         /* perform broad-phase collision test and only call the narrow-phase ( collision(a, b) ) if there is a potential contact */
 
         /* brute force test all bodies against each other for possible narrow-phase collision */
-        for(auto& a : bodies)
+        for (auto& a : bodies)
         {
-            for(auto& b : bodies)
+            for (auto& b : bodies)
             {
                 /* are the same body or both are static bodies */
-                if(&a == &b) continue;
-                if(a.type == RigidBody::eType::STATIC && b.type == RigidBody::eType::STATIC) continue;
+                if (&a == &b) continue;
+                if (a.type == RigidBody::eType::STATIC && b.type == RigidBody::eType::STATIC) continue;
 
                 /* check narrow-phase collision and add contact information to collisionContacts if the bodies are overlaping */
-                if(auto result = collision(a, b)) { collisionContacts.emplace_back(std::move(*result)); }
+                if (auto result = collision(a, b)) { collisionContacts.emplace_back(std::move(*result)); }
             }
         }
     }
@@ -88,28 +89,30 @@ void contact_response(RigidBody& a, RigidBody& b, const glm::vec2& point, const 
      *  if(a.type == RigidBody::eType::DYNAMIC) { ... }
      */
 
- 
+
 
      // calculate the relative velocity in the direction of the contact normal
     float relativeVelocity = getRelativeVelocity(a, b, normal);
-    
+
     // if the bodies are already separating, no impulse is needed
     if (relativeVelocity <= 0.0f) {
         return;
-    }else {
+    }
+    else {
 
-        
+
         float impulse = calculateImpulseMagnitude(a, b, normal);
         if (a.type == RigidBody::eType::STATIC) {
+
             b.velocity -= impulse * normal / b.shape.mass;
         }
         else if (b.type == RigidBody::eType::STATIC) {
-            a.velocity -= impulse * normal/ a.shape.mass;
+            a.velocity += impulse * normal / a.shape.mass;
         }
         else {
-
-            a.velocity += impulse * normal/ a.shape.mass;
-            b.velocity -= impulse * normal/ b.shape.mass;
+            impulse /= 2;
+            a.velocity += impulse * normal / a.shape.mass;
+            b.velocity -= impulse * normal / b.shape.mass;
         }
         return;
     }
@@ -121,7 +124,7 @@ float calculateImpulseMagnitude(RigidBody& a, RigidBody& b, const glm::vec2& nor
     float inv_mass_a = 1 / a.shape.mass;
     float inv_mass_b = 1 / a.shape.mass;
     float j = -(1 + a.coeffRest) * glm::dot(normal, a.velocity - b.velocity) / glm::dot(normal, normal) * (inv_mass_a + inv_mass_b);
-    
+
     return j;
 }
 
@@ -130,8 +133,6 @@ float getRelativeVelocity(RigidBody& a, RigidBody& b, const glm::vec2& normal) {
     return glm::dot(normal, (a.velocity - b.velocity));
 }
 //returns relative velocity of bodies a and b in normal direction of impact
-
-
 
 
 int main(int argc, char** argv)
