@@ -111,7 +111,7 @@ void contact_response(RigidBody& a, RigidBody& b, const glm::vec2& point, const 
         if (a.type == RigidBody::eType::STATIC) {
             b.velocity -= impulse * normal / b.shape.mass;
             
-            b.angularVelocity -= inverseInertiaB * (r_b.x * impulse_normal.y - r_b.y * impulse_normal.x);
+            b.angularVelocity += inverseInertiaB * (r_b.x * impulse_normal.y - r_b.y * impulse_normal.x);
         }
         else if (b.type == RigidBody::eType::STATIC) {
             a.velocity -= impulse * normal/ a.shape.mass;
