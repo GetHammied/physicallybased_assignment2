@@ -89,30 +89,45 @@ void contact_response(RigidBody& a, RigidBody& b, const glm::vec2& point, const 
      *  if(a.type == RigidBody::eType::DYNAMIC) { ... }
      */
 
-
+ 
 
      // calculate the relative velocity in the direction of the contact normal
     float relativeVelocity = getRelativeVelocity(a, b, normal);
-
+    float impulse = calculateImpulseMagnitude(a, b, normal, point);
+    glm::vec2 r_a = point - a.position;
+    glm::vec2 r_b = point - b.position;
+    glm::vec2 impulse_normal = impulse * normal;
+    float inverseInertiaB = 1 / b.shape.inertia;
+    float inverseInertiaA = 1 / a.shape.inertia;
+    glm::vec3 r_a3 = glm::vec3(r_a, 0.0f); // convert r_a to a vec3 with z = 0
+    glm::vec3 r_b3 = glm::vec3(r_b, 0.0f); // convert r_b to a vec3 with z = 0
+    glm::vec3 impulse_normal_3 = glm::vec3(impulse_normal, 0.0f); // convert impulse_normal to a vec3 with z = 0
+    glm::vec3 torque_a = glm::cross(r_a3, impulse_normal_3);
+    glm::vec3 torque_b = glm::cross(r_b3, impulse_normal_3);
+    
+    
     // if the bodies are already separating, no impulse is needed
     if (relativeVelocity <= 0.0f) {
         return;
-    }
-    else {
+    }else {
 
-
-        float impulse = calculateImpulseMagnitude(a, b, normal);
+        
+        
         if (a.type == RigidBody::eType::STATIC) {
-
             b.velocity -= impulse * normal / b.shape.mass;
+            
+            b.angularVelocity += inverseInertiaB * glm::cross(r_b3, impulse_normal_3).z;
         }
         else if (b.type == RigidBody::eType::STATIC) {
-            a.velocity += impulse * normal / a.shape.mass;
+            a.velocity -= impulse * normal/ a.shape.mass;
+            a.angularVelocity += inverseInertiaA * glm::cross(r_a3, impulse_normal_3).z;
         }
         else {
-            impulse /= 2;
-            a.velocity += impulse * normal / a.shape.mass;
-            b.velocity -= impulse * normal / b.shape.mass;
+            
+            a.velocity += impulse * normal/ a.shape.mass;
+            b.velocity -= impulse * normal/ b.shape.mass;
+            a.angularVelocity += inverseInertiaA * glm::cross(r_a3, impulse_normal_3).z;
+            b.angularVelocity -= inverseInertiaB * glm::cross(r_b3, impulse_normal_3).z;
         }
         return;
     }
@@ -120,10 +135,25 @@ void contact_response(RigidBody& a, RigidBody& b, const glm::vec2& point, const 
 
 
 
-float calculateImpulseMagnitude(RigidBody& a, RigidBody& b, const glm::vec2& normal) {
+float calculateImpulseMagnitude(RigidBody& a, RigidBody& b, const glm::vec2& normal, const glm::vec2& contactPoint) {
     float inv_mass_a = 1 / a.shape.mass;
-    float inv_mass_b = 1 / a.shape.mass;
-    float j = -(1 + a.coeffRest) * glm::dot(normal, a.velocity - b.velocity) / glm::dot(normal, normal) * (inv_mass_a + inv_mass_b);
+    float inv_mass_b = 1 / b.shape.mass;
+
+    // Calculate moment of inertia for each body
+    float inv_inertia_a = 1 / a.shape.inertia;
+    float inv_inertia_b = 1 / b.shape.inertia;
+
+    // Calculate perpendicular distance from contact point to center of mass for each body
+    glm::vec2 r_a = contactPoint - a.position;
+    glm::vec2 r_b = contactPoint - b.position;
+    float r_perp_a = glm::dot(r_a, glm::vec2(-normal.y, normal.x));
+    float r_perp_b = glm::dot(r_b, glm::vec2(-normal.y, normal.x));
+
+    // Calculate relative velocity at contact point
+    glm::vec2 v_rel = a.velocity + r_perp_a * a.angularVelocity - b.velocity - r_perp_b * b.angularVelocity;
+
+    // Calculate impulse magnitude
+    float j = -(1 + b.coeffRest) * glm::dot(normal, v_rel) /    (glm::dot(normal, normal) + (inv_mass_a + inv_mass_b + pow(r_perp_a, 2) * inv_inertia_a + pow(r_perp_b, 2) * inv_inertia_b));
 
     return j;
 }
@@ -133,7 +163,6 @@ float getRelativeVelocity(RigidBody& a, RigidBody& b, const glm::vec2& normal) {
     return glm::dot(normal, (a.velocity - b.velocity));
 }
 //returns relative velocity of bodies a and b in normal direction of impact
-
 
 int main(int argc, char** argv)
 {
